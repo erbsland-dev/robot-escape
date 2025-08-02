@@ -9,7 +9,11 @@
 #include <filesystem>
 #include <iostream>
 
-using namespace el::conf;
+using el::conf::Parser;
+using el::conf::Source;
+using el::conf::DocumentPtr;
+using el::conf::ValuePtr;
+using el::conf::Error;
 
 struct Application {
     std::filesystem::path configPath;
@@ -38,16 +42,41 @@ struct Application {
         }
     }
 
+    [[noreturn]] static void exitWithErrorInValue(const ValuePtr &value, const std::string &message) {
+        std::cerr << message
+            << " For value '"
+            << value->namePath().toText().toCharString()
+            << "' at "
+            << value->location().toText().toCharString();
+        exit(1);
+    }
+
+    [[nodiscard]] static auto rectFromSection(const ValuePtr &value) -> Rectangle {
+        Rectangle result;
+        if (value->hasValue(u8"rectangle")) {
+            const auto rectList = value->getListOrThrow<int>(u8"rectangle");
+            if (rectList.size() != 4) { exitWithErrorInValue(value, "Rectangle must have exactly four elements."); }
+            result = Rectangle(rectList[0], rectList[1], rectList[2], rectList[3]);
+        } else if (value->hasValue(u8"position") != value->hasValue(u8"size")) {
+            exitWithErrorInValue(value, "Only 'position' or 'size' is not allowed.");
+        } else if (value->hasValue(u8"position") && value->hasValue(u8"size")) {
+            auto posList = value->getListOrThrow<int>(u8"position");
+            if (posList.size() != 2) { exitWithErrorInValue(value, "Position must have exactly two elements."); }
+            auto sizeList = value->getListOrThrow<int>(u8"size");
+            if (sizeList.size() != 2) { exitWithErrorInValue(value, "Size must have exactly two elements."); }
+            result = Rectangle(Position{posList[0], posList[1]}, Size(sizeList[0], sizeList[1]));
+        } else {
+            result = Rectangle{value->getOrThrow<int>(u8"x"), value->getOrThrow<int>(u8"y"),
+                value->getOrThrow<int>(u8"width"), value->getOrThrow<int>(u8"height")};
+        }
+        return result;
+    }
+
     [[nodiscard]] auto buildWorld() const -> World {
         try {
             World world;
             for (const auto &roomValue : *config->getSectionListOrThrow("field.room")) {
-                const auto roomRect = Rectangle{
-                    static_cast<int>(roomValue->getIntegerOrThrow(u8"x")),
-                    static_cast<int>(roomValue->getIntegerOrThrow(u8"y")),
-                    static_cast<int>(roomValue->getIntegerOrThrow(u8"width")),
-                    static_cast<int>(roomValue->getIntegerOrThrow(u8"height")),
-                };
+                const auto roomRect = rectFromSection(roomValue);
                 world.field.addRoom(roomRect);
             }
             if (!cMinimumFieldSize.fitsInto(world.field.rect.size)) {

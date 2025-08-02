@@ -1,18 +1,22 @@
 
 *[field.room]
+rectangle: 2, 2, 16, 3
+
+*[field.room]
+position: 2, 2
+size: 6, 12
+
+*[field.room]
 x: 2
-y: 2
-width: 8
-height: 8
+y: 11
+width: 16
+height: 3
 
 *[field.room]
-x: 18
-y: 2
-width: 8
-height: 8
-
+rectangle: 12, 2, 6, 12
 *[field.room]
-x: 10
-y: 5
-width: 8
-height: 2
+rectangle: 0, 4, 2, 2
+*[field.room]
+rectangle: 18, 8, 5, 1
+*[field.room]
+rectangle: 18, 12, 3, 3
