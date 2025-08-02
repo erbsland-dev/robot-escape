@@ -14,9 +14,10 @@ using namespace el::conf;
 struct Application {
     std::filesystem::path configPath;
     DocumentPtr config;
-    Size canvasSize = Canvas::cDefaultSize;
 
-    constexpr static auto cMinimumSize = Size{10, 10};
+    constexpr static auto cMinimumFieldSize = Size{8, 8};
+    constexpr static auto cMaximumFieldSize = Size{80, 40};
+    constexpr static auto cMinimumCanvasSize = Size{32, 16};
 
     void parseArgs(int argc, char **argv) {
         if (argc < 2) {
@@ -39,18 +40,24 @@ struct Application {
 
     [[nodiscard]] auto buildWorld() const -> World {
         try {
-            auto fieldSize = Size{
-                static_cast<int>(config->getIntegerOrThrow(u8"field.width")),
-                static_cast<int>(config->getIntegerOrThrow(u8"field.height"))};
-            if (!cMinimumSize.fitsInto(fieldSize)) {
-                std::cerr << std::format("Field size must be at least {}x{}\n", cMinimumSize.width, cMinimumSize.height);
+            World world;
+            for (const auto &roomValue : *config->getSectionListOrThrow("field.room")) {
+                const auto roomRect = Rectangle{
+                    static_cast<int>(roomValue->getIntegerOrThrow(u8"x")),
+                    static_cast<int>(roomValue->getIntegerOrThrow(u8"y")),
+                    static_cast<int>(roomValue->getIntegerOrThrow(u8"width")),
+                    static_cast<int>(roomValue->getIntegerOrThrow(u8"height")),
+                };
+                world.field.addRoom(roomRect);
+            }
+            if (!cMinimumFieldSize.fitsInto(world.field.rect.size)) {
+                std::cerr << std::format("Field size must be at least {}x{}\n", cMinimumFieldSize.width, cMinimumFieldSize.height);
                 exit(1);
             }
-            if (!fieldSize.fitsInto(canvasSize)) {
-                std::cerr << std::format("Field size must be at most {}x{}\n", canvasSize.width, canvasSize.height);
+            if (!world.field.rect.size.fitsInto(cMaximumFieldSize)) {
+                std::cerr << std::format("Field size must be at most {}x{}\n", cMaximumFieldSize.width, cMaximumFieldSize.height);
                 exit(1);
             }
-            World world{fieldSize};
             world.addExitAtRandomPosition();
             world.setPlayerToRandomPosition();
             for (int i = 0; i < 3; ++i) {
@@ -64,6 +71,7 @@ struct Application {
     }
 
     void renderLogic(const Logic &logic) {
+        auto canvasSize = logic.world.field.rect.padded(2, 1).size.componentMax(cMinimumCanvasSize);
         Canvas canvas{canvasSize};
         logic.render(canvas);
         canvas.renderToConsole();

@@ -36,8 +36,8 @@ struct Canvas {
     void setBlocks(Block block, PosArgs... pos) noexcept {
         (setBlock(block, pos), ...);
     }
-    void fillRect(Position rectTopLeft, Size rectSize, Block block) noexcept {
-        rectSize.forEach([&](Position p) { setBlock(block, p + rectTopLeft); });
+    void fillRect(Rectangle rect, Block block) noexcept {
+        rect.forEach([&](Position p) { setBlock(block, p); });
     }
     [[nodiscard]] auto blockAt(Position pos) const noexcept -> Block {
         return blockFromOrigin(pos + topLeft);
