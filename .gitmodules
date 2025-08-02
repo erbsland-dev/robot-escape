@@ -1,0 +1,3 @@
+[submodule "erbsland-cpp-configuration"]
+	path = erbsland-cpp-configuration
+	url = https://github.com/erbsland-dev/erbsland-cpp-configuration.git
